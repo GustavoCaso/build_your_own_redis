@@ -8,50 +8,12 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/ip.h>
-
-static void msg(const char *msg)
-{
-  fprintf(stderr, "%s\n", msg);
-}
-
-static int32_t read_full(int fd, char *buf, size_t n)
-{
-  while (n > 0)
-  {
-    ssize_t rv = read(fd, buf, n);
-    if (rv <= 0)
-    {
-      return -1;
-    }
-    assert((size_t)rv <= n);
-    n -= (size_t)rv;
-    buf += rv;
-  }
-  return 0;
-}
-
-static int32_t write_all(int fd, const char *buf, size_t n)
-{
-  while (n > 0)
-  {
-    ssize_t rv = write(fd, buf, n);
-    if (rv <= 0)
-    {
-      return -1;
-    }
-    assert((size_t)rv <= n);
-    n -= (size_t)rv;
-    buf += rv;
-  }
-  return 0;
-}
-
-const size_t k_max_msg = 4096;
+#include "helper.hpp"
 
 static int32_t one_request(int connfd)
 {
   // 4 byte header
-  char rbuf[4 + k_max_msg + 1];
+  char rbuf[4 + K_MAX_MSG + 1];
   errno = 0;
   int32_t err = read_full(connfd, rbuf, 4);
   if (err)
@@ -69,7 +31,7 @@ static int32_t one_request(int connfd)
 
   uint32_t len = 0;
   memcpy(&len, rbuf, 4);
-  if (len > k_max_msg)
+  if (len > K_MAX_MSG)
   {
     msg("too long");
     return -1;
@@ -94,13 +56,6 @@ static int32_t one_request(int connfd)
   memcpy(wbuf, &len, 4);
   memcpy(&wbuf[4], reply, len);
   return write_all(connfd, wbuf, 4 + len);
-}
-
-static void die(const char *msg)
-{
-  int err = errno;
-  fprintf(stderr, "[%d] %s\n", err, msg);
-  abort();
 }
 
 int main()
