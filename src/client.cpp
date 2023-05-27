@@ -10,7 +10,8 @@
 #include <netinet/ip.h>
 #include "helper.hpp"
 
-static int32_t query(int fd, const char *text)
+// the `query` function was simply splited into `send_req` and `read_res`.
+static int32_t send_req(int fd, const char *text)
 {
   uint32_t len = (uint32_t)strlen(text);
   if (len > K_MAX_MSG)
@@ -21,11 +22,11 @@ static int32_t query(int fd, const char *text)
   char wbuf[4 + K_MAX_MSG];
   memcpy(wbuf, &len, 4); // assume little endian
   memcpy(&wbuf[4], text, len);
-  if (int32_t err = write_all(fd, wbuf, 4 + len))
-  {
-    return err;
-  }
+  return write_all(fd, wbuf, 4 + len);
+}
 
+static int32_t read_res(int fd)
+{
   // 4 bytes header
   char rbuf[4 + K_MAX_MSG + 1];
   errno = 0;
@@ -43,6 +44,7 @@ static int32_t query(int fd, const char *text)
     return err;
   }
 
+  uint32_t len = 0;
   memcpy(&len, rbuf, 4); // assume little endian
   if (len > K_MAX_MSG)
   {
@@ -75,29 +77,30 @@ int main()
   struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
   addr.sin_port = ntohs(1234);
-  addr.sin_addr.s_addr = ntohl(INADDR_LOOPBACK);
+  addr.sin_addr.s_addr = ntohl(INADDR_LOOPBACK); // 127.0.0.1
   int rv = connect(fd, (const struct sockaddr *)&addr, sizeof(addr));
-
   if (rv)
   {
     die("connect");
   }
 
-  // multiple requests
-  int32_t err = query(fd, "hello1");
-  if (err)
+  // multiple pipelined requests
+  const char *query_list[3] = {"hello1", "hello2", "hello3"};
+  for (size_t i = 0; i < 3; ++i)
   {
-    goto L_DONE;
+    int32_t err = send_req(fd, query_list[i]);
+    if (err)
+    {
+      goto L_DONE;
+    }
   }
-  err = query(fd, "hello2");
-  if (err)
+  for (size_t i = 0; i < 3; ++i)
   {
-    goto L_DONE;
-  }
-  err = query(fd, "hello3");
-  if (err)
-  {
-    goto L_DONE;
+    int32_t err = read_res(fd);
+    if (err)
+    {
+      goto L_DONE;
+    }
   }
 
 L_DONE:
