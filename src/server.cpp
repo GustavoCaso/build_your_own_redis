@@ -93,118 +93,6 @@ static int32_t accept_new_conn(std::vector<Conn *> &fd2conn, int fd)
   return 0;
 }
 
-static void state_req(Conn *conn)
-{
-  while (try_fill_buffer(conn))
-  {
-  }
-}
-
-static bool try_fill_buffer(Conn *conn)
-{
-  // try to fill the buffer
-  assert(conn->rbuf_size < sizeof(conn->rbuf));
-  ssize_t rv = 0;
-  do
-  {
-    size_t cap = sizeof(conn->rbuf) - conn->rbuf_size;
-    rv = read(conn->fd, &conn->rbuf[conn->rbuf_size], cap);
-  } while (rv < 0 && errno == EINTR);
-
-  if (rv < 0 && errno == EAGAIN)
-  {
-    // got EAGAIN, stop
-    return false;
-  }
-
-  if (rv < 0)
-  {
-    msg("read() error");
-    conn->state = STATE_END;
-    return false;
-  }
-
-  if (rv == 0)
-  {
-    if (conn->rbuf_size > 0)
-    {
-      msg("unexpected EOF");
-    }
-    else
-    {
-      msg("EOF");
-    }
-    conn->state = STATE_END;
-    return false;
-  }
-
-  conn->rbuf_size += (size_t)rv;
-  assert(conn->rbuf_size <= sizeof(conn->rbuf));
-
-  // Try to process request one by one
-  // Why is there a loop? Please read the explanantion of "pipelining"
-  while (try_one_request(conn))
-  {
-  }
-  return (conn->state == STATE_REQ);
-}
-
-static bool try_one_request(Conn *conn)
-{
-  // try to parse a request from the body
-  if (conn->rbuf_size < 4)
-  {
-    // not enough data in the buffer. Will retry in the next iteration
-    return false;
-  }
-
-  uint32_t len = 0;
-  memcpy(&len, &conn->rbuf[0], 4);
-  if (len > K_MAX_MSG)
-  {
-    msg("too long");
-    conn->state = STATE_END;
-    return false;
-  }
-  if (4 + len > conn->rbuf_size)
-  {
-    // not enough data in the buffer. Will retry in the next iteration
-    return false;
-  }
-
-  // got one request, do something with it
-  printf("client says: %.*s\n", len, conn->rbuf[4]);
-
-  // generating echoing response
-  memcpy(&conn->wbuf[0], &len, 4);
-  memcpy(&conn->wbuf[4], &conn->rbuf[4], len);
-  conn->wbuf_size = 4 + len;
-
-  // remove the request from the buffer.
-  // note: frequent memmove is ineficient.
-  // note: need better handling for production code.
-  size_t remain = conn->rbuf_size - 4 - len;
-  if (remain)
-  {
-    memmove(conn->rbuf, &conn->rbuf[4 + len], remain);
-  }
-
-  conn->rbuf_size = remain;
-
-  // change state
-  conn->state = STATE_RES;
-  state_res(conn);
-
-  return (conn->state == STATE_REQ);
-}
-
-static void state_res(Conn *conn)
-{
-  while (try_flush_buffer(conn))
-  {
-  }
-}
-
 static bool try_flush_buffer(Conn *conn)
 {
   ssize_t rv = 0;
@@ -240,6 +128,118 @@ static bool try_flush_buffer(Conn *conn)
 
   // still got some dfata in the wbuf, could try to write again
   return true;
+}
+
+static void state_res(Conn *conn)
+{
+  while (try_flush_buffer(conn))
+  {
+  }
+}
+
+static bool try_one_request(Conn *conn)
+{
+  // try to parse a request from the body
+  if (conn->rbuf_size < 4)
+  {
+    // not enough data in the buffer. Will retry in the next iteration
+    return false;
+  }
+
+  uint32_t len = 0;
+  memcpy(&len, &conn->rbuf[0], 4);
+  if (len > K_MAX_MSG)
+  {
+    msg("too long");
+    conn->state = STATE_END;
+    return false;
+  }
+  if (4 + len > conn->rbuf_size)
+  {
+    // not enough data in the buffer. Will retry in the next iteration
+    return false;
+  }
+
+  // got one request, do something with it
+  printf("client says: %.*s\n", len, &conn->rbuf[4]);
+
+  // generating echoing response
+  memcpy(&conn->wbuf[0], &len, 4);
+  memcpy(&conn->wbuf[4], &conn->rbuf[4], len);
+  conn->wbuf_size = 4 + len;
+
+  // remove the request from the buffer.
+  // note: frequent memmove is ineficient.
+  // note: need better handling for production code.
+  size_t remain = conn->rbuf_size - 4 - len;
+  if (remain)
+  {
+    memmove(conn->rbuf, &conn->rbuf[4 + len], remain);
+  }
+
+  conn->rbuf_size = remain;
+
+  // change state
+  conn->state = STATE_RES;
+  state_res(conn);
+
+  return (conn->state == STATE_REQ);
+}
+
+static bool try_fill_buffer(Conn *conn)
+{
+  // try to fill the buffer
+  assert(conn->rbuf_size < (ssize_t)sizeof(conn->rbuf));
+  ssize_t rv = 0;
+  do
+  {
+    size_t cap = sizeof(conn->rbuf) - conn->rbuf_size;
+    rv = read(conn->fd, &conn->rbuf[conn->rbuf_size], cap);
+  } while (rv < 0 && errno == EINTR);
+
+  if (rv < 0 && errno == EAGAIN)
+  {
+    // got EAGAIN, stop
+    return false;
+  }
+
+  if (rv < 0)
+  {
+    msg("read() error");
+    conn->state = STATE_END;
+    return false;
+  }
+
+  if (rv == 0)
+  {
+    if (conn->rbuf_size > 0)
+    {
+      msg("unexpected EOF");
+    }
+    else
+    {
+      msg("EOF");
+    }
+    conn->state = STATE_END;
+    return false;
+  }
+
+  conn->rbuf_size += (size_t)rv;
+  assert(conn->rbuf_size <= (ssize_t)sizeof(conn->rbuf));
+
+  // Try to process request one by one
+  // Why is there a loop? Please read the explanantion of "pipelining"
+  while (try_one_request(conn))
+  {
+  }
+  return (conn->state == STATE_REQ);
+}
+
+static void state_req(Conn *conn)
+{
+  while (try_fill_buffer(conn))
+  {
+  }
 }
 
 static void connection_io(Conn *conn)
