@@ -10,7 +10,7 @@ struct AVLNode
   AVLNode *parent = NULL;
 };
 
-static void avl_int(AVLNode *node)
+static void avl_init(AVLNode *node)
 {
   node->depth = 1;
   node->cnt = 1;
@@ -146,7 +146,7 @@ static AVLNode *avl_del(AVLNode *node)
     AVLNode *victim = node->right;
     while (victim->left)
     {
-      victim->left;
+      victim = victim->left;
     }
 
     AVLNode *root = avl_del(victim);
