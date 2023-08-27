@@ -15,21 +15,7 @@
 #include <map>
 #include "helper.hpp"
 #include "hashtable.hpp"
-
-template <class P, class M>
-size_t my_offsetof(const M P::*member)
-{
-  return (size_t) & (reinterpret_cast<P *>(0)->*member);
-}
-
-template <class P, class M>
-P *my_container_of_impl(M *ptr, const M P::*member)
-{
-  return (P *)((char *)ptr - my_offsetof(member));
-}
-
-#define my_container_of(ptr, type, member) \
-  my_container_of_impl(ptr, &type::member)
+#include "common.h"
 
 enum
 {
@@ -42,15 +28,6 @@ enum
 {
   ERR_UNKNOWN = 1,
   ERR_2BIG = 2,
-};
-
-enum
-{
-  SER_NIL = 0, // Like NULL
-  SER_ERR = 1, // An error and message
-  SER_STR = 2, // A string
-  SER_INT = 3, // A int64
-  SER_ARR = 4, // Array
 };
 
 struct Conn
@@ -82,19 +59,9 @@ static struct
 
 static bool entry_eq(HNode *lhs, HNode *rhs)
 {
-  struct Entry *le = my_container_of(lhs, Entry, node);
-  struct Entry *re = my_container_of(rhs, Entry, node);
+  struct Entry *le = container_of(lhs, Entry, node);
+  struct Entry *re = container_of(rhs, Entry, node);
   return lhs->hcode == rhs->hcode && le->key == re->key;
-}
-
-static uint64_t str_hash(const uint8_t *data, size_t len)
-{
-  uint32_t h = 0x811C9DC5;
-  for (size_t i = 0; i < len; i++)
-  {
-    h = (h + data[i]) * 0x01000193;
-  }
-  return h;
 }
 
 static void out_nil(std::string &out)
@@ -152,7 +119,7 @@ static void h_scan(HTab *tab, void (*f)(HNode *, void *), void *arg)
 static void cb_scan(HNode *node, void *arg)
 {
   std::string &out = *(std::string *)arg;
-  out_str(out, my_container_of(node, Entry, node)->key);
+  out_str(out, container_of(node, Entry, node)->key);
 }
 
 static void do_keys(std::vector<std::string> &cmd, std::string &out)
@@ -175,7 +142,7 @@ static void do_get(std::vector<std::string> &cmd, std::string &out)
     return out_nil(out);
   }
 
-  const std::string &val = my_container_of(node, Entry, node)->val;
+  const std::string &val = container_of(node, Entry, node)->val;
   out_str(out, val);
 }
 
@@ -188,7 +155,7 @@ static void do_set(std::vector<std::string> &cmd, std::string &out)
   HNode *node = hm_lookup(&g_data.db, &key.node, &entry_eq);
   if (node)
   {
-    my_container_of(node, Entry, node)->val.swap(cmd[2]);
+    container_of(node, Entry, node)->val.swap(cmd[2]);
   }
   else
   {
@@ -210,7 +177,7 @@ static void do_del(std::vector<std::string> &cmd, std::string &out)
   HNode *node = hm_pop(&g_data.db, &key.node, &entry_eq);
   if (node)
   {
-    delete my_container_of(node, Entry, node);
+    delete container_of(node, Entry, node);
   }
   out_int(out, node ? 1 : 0);
 }

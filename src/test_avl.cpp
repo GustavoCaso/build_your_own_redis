@@ -3,21 +3,7 @@
 #include <stdlib.h>
 #include <set>
 #include "avl.cpp" // lazy
-
-template <class P, class M>
-size_t my_offsetof(const M P::*member)
-{
-  return (size_t) & (reinterpret_cast<P *>(0)->*member);
-}
-
-template <class P, class M>
-P *my_container_of_impl(M *ptr, const M P::*member)
-{
-  return (P *)((char *)ptr - my_offsetof(member));
-}
-
-#define my_container_of(ptr, type, member) \
-  my_container_of_impl(ptr, &type::member)
+#include "common.h"
 
 struct Data
 {
@@ -45,7 +31,7 @@ static void add(Container &c, uint32_t val)
   AVLNode *cur = c.root;
   while (true)
   {
-    AVLNode **from = (val < my_container_of(cur, Data, node)->val) ? &cur->left : &cur->right;
+    AVLNode **from = (val < container_of(cur, Data, node)->val) ? &cur->left : &cur->right;
     if (!*from)
     {
       *from = &data->node;
@@ -62,7 +48,7 @@ static bool del(Container &c, uint32_t val)
   AVLNode *cur = c.root;
   while (cur)
   {
-    uint32_t node_val = my_container_of(cur, Data, node)->val;
+    uint32_t node_val = container_of(cur, Data, node)->val;
     if (val == node_val)
     {
       break;
@@ -75,7 +61,7 @@ static bool del(Container &c, uint32_t val)
   }
 
   c.root = avl_del(cur);
-  delete my_container_of(cur, Data, node);
+  delete container_of(cur, Data, node);
   return true;
 }
 
@@ -97,16 +83,16 @@ static void avl_verify(AVLNode *parent, AVLNode *node)
   assert(l == r || l + 1 == r || l == r + 1);
   assert(node->depth == 1 + max(l, r));
 
-  uint32_t val = my_container_of(node, Data, node)->val;
+  uint32_t val = container_of(node, Data, node)->val;
   if (node->left)
   {
     assert(node->left->parent == node);
-    assert(my_container_of(node->left, Data, node)->val <= val);
+    assert(container_of(node->left, Data, node)->val <= val);
   }
   if (node->right)
   {
     assert(node->right->parent == node);
-    assert(my_container_of(node->right, Data, node)->val >= val);
+    assert(container_of(node->right, Data, node)->val >= val);
   }
 }
 
@@ -117,7 +103,7 @@ static void extract(AVLNode *node, std::multiset<uint32_t> &extracted)
     return;
   }
   extract(node->left, extracted);
-  extracted.insert(my_container_of(node, Data, node)->val);
+  extracted.insert(container_of(node, Data, node)->val);
   extract(node->right, extracted);
 }
 
@@ -137,7 +123,7 @@ static void dispose(Container &c)
   {
     AVLNode *node = c.root;
     c.root = avl_del(c.root);
-    delete my_container_of(node, Data, node);
+    delete container_of(node, Data, node);
   }
 }
 
