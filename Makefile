@@ -8,6 +8,9 @@ $(BUILD_DIR)/*.o: $(SRC_DIRS)/*.cpp
 	$(CXX) $(CXXFLAGS) $(SRC_DIRS)/helper.cpp  $(SRC_DIRS)/hashtable.cpp $(SRC_DIRS)/server.cpp -I ./ -o $(BUILD_DIR)/server
 	$(CXX) $(CXXFLAGS) $(SRC_DIRS)/helper.cpp $(SRC_DIRS)/client.cpp -I ./ -o $(BUILD_DIR)/client
 
+test_avl:
+	$(CXX) $(CXXFLAGS) $(SRC_DIRS)/test_avl.cpp -I ./ -o $(BUILD_DIR)/test_avl
+
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
