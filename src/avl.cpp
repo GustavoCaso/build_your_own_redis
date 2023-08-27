@@ -1,21 +1,4 @@
-#include <stddef.h>
-#include <stdint.h>
-
-struct AVLNode
-{
-  uint32_t depth = 0;
-  uint32_t cnt = 0;
-  AVLNode *left = NULL;
-  AVLNode *right = NULL;
-  AVLNode *parent = NULL;
-};
-
-static void avl_init(AVLNode *node)
-{
-  node->depth = 1;
-  node->cnt = 1;
-  node->left = node->right = node->parent = NULL;
-}
+#include "avl.h"
 
 static uint32_t avl_depth(AVLNode *node)
 {
@@ -91,7 +74,7 @@ static AVLNode *avl_fix_right(AVLNode *root)
   return rot_left(root);
 }
 
-static AVLNode *avl_fix(AVLNode *node)
+AVLNode *avl_fix(AVLNode *node)
 {
   while (true)
   {
@@ -120,7 +103,7 @@ static AVLNode *avl_fix(AVLNode *node)
   }
 }
 
-static AVLNode *avl_del(AVLNode *node)
+AVLNode *avl_del(AVLNode *node)
 {
   if (node->right == NULL)
   {
