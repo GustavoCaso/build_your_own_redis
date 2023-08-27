@@ -11,6 +11,7 @@
 #include <vector>
 #include <string>
 #include "helper.hpp"
+#include "common.h"
 
 static int32_t send_req(int fd, const std::vector<std::string> &cmd)
 {
@@ -38,15 +39,6 @@ static int32_t send_req(int fd, const std::vector<std::string> &cmd)
   }
   return write_all(fd, wbuf, 4 + len);
 }
-
-enum
-{
-  SER_NIL = 0, // Like NULL
-  SER_ERR = 1, // An error and message
-  SER_STR = 2, // A string
-  SER_INT = 3, // A int64
-  SER_ARR = 4, // Array
-};
 
 static int32_t on_response(const uint8_t *data, size_t size)
 {
@@ -107,6 +99,18 @@ static int32_t on_response(const uint8_t *data, size_t size)
       int64_t val = 0;
       memcpy(&val, &data[1], 8);
       printf("(int) %lld\n", val);
+      return 1 + 8;
+    }
+  case SER_DBL:
+    if (size < 1 + 8)
+    {
+      msg("bad response");
+      return -1;
+    }
+    {
+      double val = 0;
+      memcpy(&val, &data[1], 8);
+      printf("(dbl) %g\n", val);
       return 1 + 8;
     }
   case SER_ARR:
