@@ -1,7 +1,7 @@
 #pragma once
 
 #include "avl.h"
-#include "hashtable.hpp"
+#include "hashtable.h"
 
 struct ZSet
 {

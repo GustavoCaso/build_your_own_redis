@@ -1,4 +1,4 @@
-#include "hashtable.hpp"
+#include "hashtable.h"
 #include <assert.h>
 
 // n must be power of 2

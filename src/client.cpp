@@ -10,7 +10,7 @@
 #include <netinet/ip.h>
 #include <vector>
 #include <string>
-#include "helper.hpp"
+#include "helper.h"
 #include "common.h"
 
 static int32_t send_req(int fd, const std::vector<std::string> &cmd)
