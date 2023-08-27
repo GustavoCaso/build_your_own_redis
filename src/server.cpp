@@ -19,6 +19,7 @@
 #include "zset.h"
 #include "list.h"
 #include "heap.h"
+#include "thread_pool.h"
 #include "common.h"
 
 enum
@@ -74,6 +75,8 @@ static struct
   DList idle_list;
   // tiimers for TTLs
   std::vector<HeapItem> heap;
+  // the thread pool
+  TheadPool tp;
 } g_data;
 
 enum
@@ -275,7 +278,8 @@ static void do_set(std::vector<std::string> &cmd, std::string &out)
   return out_nil(out);
 }
 
-static void entry_del(Entry *ent)
+// deallocate the key immediately
+static void entry_destroy(Entry *ent)
 {
   switch (ent->type)
   {
@@ -284,8 +288,36 @@ static void entry_del(Entry *ent)
     delete ent->zset;
     break;
   }
-  entry_set_ttl(ent, -1);
   delete ent;
+}
+
+static void entry_del_async(void *arg)
+{
+  entry_destroy((Entry *)arg);
+}
+
+// dispose the entry after it got detached from the key space
+static void entry_del(Entry *ent)
+{
+  entry_set_ttl(ent, -1);
+
+  const size_t k_large_container_size = 10000;
+  bool too_big = false;
+  switch (ent->type)
+  {
+  case T_ZSET:
+    too_big = hm_size(&ent->zset->hmap) > k_large_container_size;
+    break;
+  }
+
+  if (too_big)
+  {
+    thread_pool_queue(&g_data.tp, &entry_del_async, ent);
+  }
+  else
+  {
+    entry_destroy(ent);
+  }
 }
 
 static void do_del(std::vector<std::string> &cmd, std::string &out)
@@ -920,6 +952,7 @@ int main()
 {
   // some initialisation
   dlist_init(&g_data.idle_list);
+  thread_pool_init(&g_data.tp, 4);
 
   int fd = socket(AF_INET, SOCK_STREAM, 0);
   if (fd < 0)
