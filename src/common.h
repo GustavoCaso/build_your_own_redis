@@ -1,4 +1,5 @@
-#pragma once
+#ifndef COMMON_H
+#define COMMON_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -37,3 +38,5 @@ enum
   SER_DBL = 4,
   SER_ARR = 5,
 };
+
+#endif

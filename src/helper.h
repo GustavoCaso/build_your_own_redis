@@ -2,7 +2,6 @@
 #define HELPER_H
 
 #include <assert.h>
-#pragma once
 
 #include <stdio.h>
 #include <unistd.h>

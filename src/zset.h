@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ZSET_H
+#define ZSET_H
 
 #include "avl.h"
 #include "hashtable.h"
@@ -25,3 +26,5 @@ ZNode *zset_query(
     ZSet *zset, double score, const char *name, size_t len, int64_t offset);
 void zset_dispose(ZSet *zset);
 void znode_del(ZNode *node);
+
+#endif
