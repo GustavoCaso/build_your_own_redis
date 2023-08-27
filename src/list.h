@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LIST_H
+#define LIST_H
 
 #include <stddef.h>
 
@@ -34,3 +35,5 @@ inline void dlist_insert_before(DList *target, DList *rookie)
   rookie->next = target;
   target->prev = rookie;
 }
+
+#endif

@@ -2,6 +2,7 @@
 #define HELPER_H
 
 #include <assert.h>
+
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>

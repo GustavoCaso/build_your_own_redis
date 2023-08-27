@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <set>
-#include "avl.cpp" // lazy
-#include "common.h"
+#include "../src/avl.cpp" // lazy
+#include "../src/common.h"
 
 struct Data
 {

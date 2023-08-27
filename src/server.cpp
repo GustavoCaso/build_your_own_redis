@@ -14,8 +14,8 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "helper.hpp"
-#include "hashtable.hpp"
+#include "helper.h"
+#include "hashtable.h"
 #include "zset.h"
 #include "list.h"
 #include "heap.h"
